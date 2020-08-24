@@ -1,16 +1,18 @@
 #Specify vCenter Server, Username, Password
 
-$vCenter = "nkc-vcenter.nkcschools.org"
+$vCenter = "nkc-vcenter.domain"
 $vcUser = "925114@vsphere.local"
 $vcPwd = "<secretpwd>"
 
 
-#Specify Number of VMs to create
-$vmCount = "01", "02", "03"
+#ESXi hosts to place VMs on
+$esxiHost1 = "nkc-vdi-esx01.nkcschools.org"
+$esxiHost2 = "nkc-vdi-esx02.nkcschools.org"
+$esxiHost3 = "nkc-vdi-esx03.nkcschools.org"
 
 
 #Specify the Template to use
-$testTemp = "rds-mgmt-template"
+$vmTemplate = "rds-sh-postapp-template"
 
 
 #Specify Customization Specification to use
@@ -21,17 +23,13 @@ $custSpec = "win2019-domain-staticip"
 $ds = "vdi-vmfs01"
 
 
-#ESXi host to place VMs on
-$esxiHost = "nkc-vdi-esx01.nkcschools.org"
-
-
 #Specify VM folder to place the new VMs in
-$vmFolder = "RDS Test"
+$vmFolder = "RDS Session Hosts"
 
 
 #Specify the prefix to use for the VM names and IP Address
 $vmPrefix = "nkc-rds-sh"
-$ipPrefix = "10.201.12."
+$ipPrefix = "10.201.3."
 
 
 #
@@ -46,25 +44,101 @@ Connect-viserver $vCenter -user $vcUser -password $vcPwd -WarningAction 0 | Out-
 
 $subnet = "255.255.240.0"
 $gateway = "10.201.15.254"
-$dns = "10.201.1.30"
-$i = 80
+$pdns = "10.201.1.30"
+$sdns = "10.201.1.31"
 
-foreach ($n in $vmCount)
+$ans = Read-Host "
+  Specify which ESXi Host wanting to add VMs to (1, 2, or 3):
+  1 = vdi-esx01 (rds-sh01-sh05)
+  2 = vdi-esx02 (rds-sh06-sh10)
+  3 = vid-esx03 (rds-sh11-sh15) "
+
+If ($ans -eq 1)
 {
-$vmName = $vmPrefix + $n
-$ipAddress = $ipPrefix + $i
+  #Specify Number of VMs to create
+  $vmCount1 = 5
+  $i = 60
+  1..$vmCount1 | foreach {
+    $n1 = "{0:D2}" -f + $_
+      $vmName1 = $vmPrefix + $n1
+    $ipAddress = $ipPrefix + $i
 
-Write-host "
-  Creation of VM $vmName initiated. Please wait..." -Foreground Yellow
+    Write-host "
+  Creation of VM $vmName1 initiated. Please wait..." -Foreground Yellow
 
-$nicMapping = Get-OSCustomizationNicMapping $custSpec
-$nicMapping | Set-OSCustomizationNicMapping -IpMode UseStaticIP -IpAddress $ipAddress -SubnetMask $subnet -DefaultGateway $gateway -Dns $dns -Position 1
-New-VM -Name $vmName -Template $testTemp -VMHost $esxiHost -Datastore $ds -Location $vmFolder -OSCustomizationSpec $cusSpec
-Start-Sleep -Seconds 70
-Start-VM -VM $vmName -Confirm:$false
-Start-Sleep -Seconds 30
-Get-VM -Name $vmName | Get-NetworkAdapter | Set-NetworkAdapter -NetworkName "VM-510" -Confirm:$false
-$i++
+    $nicMapping = Get-OSCustomizationSpec $custSpec | Get-OSCustomizationNicMapping
+    $nicMapping | Set-OSCustomizationNicMapping -IpMode UseStaticIP -IpAddress $ipAddress -SubnetMask $subnet -DefaultGateway $gateway -Dns $pdns,$sdns -Position 1
+    New-VM -Name $vmName1 -Template $vmTemplate -VMHost $esxiHost1 -Datastore $ds -Location $vmFolder | Set-VM -OSCustomizationSpec $custSpec -Confirm:$false
+
+    Start-VM -VM $vmName1 -Confirm:$false
+    Start-Sleep -Seconds 8
+    Get-VM -Name $vmName1 | Get-NetworkAdapter | Set-NetworkAdapter -NetworkName "VM-510" -Connected:$false -Confirm:$false
+    Get-VM -Name $vmName1 | Get-NetworkAdapter | Set-NetworkAdapter -Connected:$true -Confirm:$false
+    $i++
+    }
+}
+ElseIf ($ans -eq 2)
+{
+  #Specify Number of VMs to create
+  $vmCount2 = 10
+  $i = 65
+  6..$vmCount2 | foreach {
+    $n2 = "{0:D2}" -f + $_
+    $vmName2 = $vmPrefix + $n2
+    $ipAddress = $ipPrefix + $i
+
+    Write-host "
+  Creation of VM $vmName2 initiated. Please wait..." -Foreground Yellow
+
+    $nicMapping = Get-OSCustomizationSpec $custSpec | Get-OSCustomizationNicMapping
+    $nicMapping | Set-OSCustomizationNicMapping -IpMode UseStaticIP -IpAddress $ipAddress -SubnetMask $subnet -DefaultGateway $gateway -Dns $pdns,$sdns -Position 1
+    New-VM -Name $vmName2 -Template $vmTemplate -VMHost $esxiHost2 -Datastore $ds -Location $vmFolder | Set-VM -OSCustomizationSpec $custSpec -Confirm:$false
+
+    Start-VM -VM $vmName2 -Confirm:$false
+    Start-Sleep -Seconds 8
+    Get-VM -Name $vmName2 | Get-NetworkAdapter | Set-NetworkAdapter -NetworkName "VM-510" -Connected:$false -Confirm:$false
+    Get-VM -Name $vmName2 | Get-NetworkAdapter | Set-NetworkAdapter -Connected:$true -Confirm:$false
+    $i++
+    }
+}
+ElseIf ($ans -eq 3)
+{
+  #Specify Number of VMs to create
+  $vmCount3 = 15
+  $i = 70
+  11..$vmCount3 | foreach {
+    $n3 = "{0:D2}" -f + $_
+    $vmName3 = $vmPrefix + $n3
+    $ipAddress = $ipPrefix + $i
+
+    Write-host "
+  Creation of VM $vmName3 initiated. Please wait..." -Foreground Yellow
+
+    $nicMapping = Get-OSCustomizationSpec $custSpec | Get-OSCustomizationNicMapping
+    $nicMapping | Set-OSCustomizationNicMapping -IpMode UseStaticIP -IpAddress $ipAddress -SubnetMask $subnet -DefaultGateway $gateway -Dns $pdns,$sdns -Position 1
+    New-VM -Name $vmName3 -Template $vmTemplate -VMHost $esxiHost3 -Datastore $ds -Location $vmFolder | Set-VM -OSCustomizationSpec $custSpec -Confirm:$false
+
+    Start-VM -VM $vmName3 -Confirm:$false
+    Start-Sleep -Seconds 8
+    Get-VM -Name $vmName3 | Get-NetworkAdapter | Set-NetworkAdapter -NetworkName "VM-510" -Connected:$false -Confirm:$false
+    Get-VM -Name $vmName3 | Get-NetworkAdapter | Set-NetworkAdapter -Connected:$true -Confirm:$false
+    $i++
+    }
+}
+Else
+{
+Write-Host "
+  You did not select 1, 2, or 3. Hit CTL+C and re-run the script."  -ForegroundColor DarkRed
 }
 
-Write-Host "  All VMs created. Verify each VM settings in vCenter." -ForegroundColor Green
+
+Write-Host "
+  All VMs for specified VDI Host have been created. It can take several minutes for the VMs to be
+  added to Active Directory. Verify each VM settings in AD and vCenter." -ForegroundColor Green
+Write-Host "
+  If it takes more than 7mins or so for VM to be added to AD, check the VM nic (disconnect/reconnect)."  -ForegroundColor Green
+Write-Host "
+  Re-run the script for each remaining VDI Host VM creation." -ForegroundColor Yellow
+
+
+
