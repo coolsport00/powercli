@@ -6,9 +6,9 @@ $vcPwd = "<secretpwd>"
 
 
 #ESXi hosts to place VMs on
-$esxiHost1 = "nkc-vdi-esx01.nkcschools.org"
-$esxiHost2 = "nkc-vdi-esx02.nkcschools.org"
-$esxiHost3 = "nkc-vdi-esx03.nkcschools.org"
+$esxiHost1 = "nkc-vdi-esx01.domain"
+$esxiHost2 = "nkc-vdi-esx02.domain"
+$esxiHost3 = "nkc-vdi-esx03.domain"
 
 
 #Specify the Template to use
